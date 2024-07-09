@@ -24,77 +24,61 @@
 // -- This will overwrite an existing command --
 // Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
 
+import { DEPARTMENTS, User } from "./constants";
+import { getRandomSalary } from "./utils";
+
 const { faker } = require('@faker-js/faker');
 
-export type User = {
-  fullName: string;
-  email: string;
-  password: string;
-}
-
 Cypress.Commands.add('signUp' as any, () => {
+  cy.visit('/employees/');
+
   let fullName: string;
-    do {
-      fullName = faker.person.fullName();
-    } while (fullName.split(' ').length < 2);
+  do {
+    fullName = faker.person.fullName();
+  } while (fullName.split(' ').length < 2);
 
   const user: User = {
     fullName: fullName,
     email: faker.internet.email(),
-    password: 'Password123'
+    position: faker.name.jobTitle(),
+    department: DEPARTMENTS[Math.floor(Math.random() * DEPARTMENTS.length)],
+    salary: getRandomSalary(),
+    startDate: new Date()
   };
 
-  cy.visit('/');
-
-  // Fill in the full name
-  cy.get('#id-user-name')
+  cy.get('#validationFullName')
     .type(fullName)
     .should('have.value', fullName)
 
-  // Fill in the email
-  cy.get('#id-email')
+  cy.get('#validationEmail')
     .type(user.email)
     .should('have.value', user.email)
 
-  // The password fields should now be visible
-  cy.get('#user_password1')
-    .should('be.visible')
-    .type(user.password)
-    .should('have.value', user.password)
+  cy.get('#validationPosition')
+    .type(user.position)
+    .should('have.value', user.position)
 
-  cy.get('#user_password2')
-    .should('be.visible')
-    .type(user.password)
-    .should('have.value', user.password)
+  cy.contains('button', 'Engineering')
+    .click()
 
-  // Enable the sign up button
-  cy.get('#id-btn-sign-up').should('not.be.disabled')
+  cy.contains('a', user.department)
+    .should('exist')
+    .click()
 
-  // Click the sign up button
-  cy.get('#id-btn-sign-up').click()
+  cy.get('#salaryGroup')
+    .should('exist')
+    .type(user.salary.toString())
 
-  cy.url().should('include', '/users/verify-email');
+  cy.get('#startDateGroup')
+    .should('exist')
+    .type(user.startDate.toISOString().split('T')[0]);
 
-  // avoid sending the user with the verification code, and flooding the email box.
-  cy.intercept("/api/v1/users/send_verification_code_email/", {})
-
-  cy.get('.email-label').should('contain', user.email.toLowerCase())
-
-  // hack to bypass verification code in debug mode
-  cy.get('#input-verification-code')
-    .should('be.visible')
-    .type('111111')
-    .should('have.value', '111111')
-
-  cy.get('#btn-continue')
+  cy.get('[data-testid="save-button"]')
+    .should('exist')
     .should('be.enabled')
     .click();
 
-  // dismiss the welcome modal
-  cy.get('[data-testid="welcome-modal-close-button"]', { timeout: 5000 }) // Wait up to 5 seconds
-    .should('exist') // Ensure the element exists
-    .should('be.visible') // Ensure the element is visible
-    .click(); // Click the button
+  cy.url().should('includes', '/dashboard/');
 
   // wraps the user for later use. this should be the last code.
   cy.wrap(user)
