@@ -91,7 +91,7 @@ describe('Landing Page', () => {
   });
 
   describe('Clicking on the user from the list', ()=>{
-    it.only('navigates to edit the employee panel', ()=>{
+    it('navigates to edit the employee panel', ()=>{
       cy.get('[data-testid^="employee-row-"]').first().then(($el) => {
         // Get the data-testid attribute value
         const dataTestId = $el.attr('data-testid');
